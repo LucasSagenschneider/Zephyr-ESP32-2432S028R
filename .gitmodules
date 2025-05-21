@@ -1,0 +1,4 @@
+[submodule "introduction-to-zephyr"]
+	path = introduction-to-zephyr
+	url = https://github.com/ShawnHymel/introduction-to-zephyr.git
+	branch = main
