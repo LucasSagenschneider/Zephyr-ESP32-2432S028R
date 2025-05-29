@@ -8,8 +8,8 @@ The setup will first follow the examples from Shawn.
 I would also like to give a big thanks to him. he has built a great tutorial on Youtube.
 https://github.com/ShawnHymel/introduction-to-zephyr
 
-I use these commands most frequently:
-    start the docker image:
+I use these commands most frequently
+    start the docker image
         1. start the docker desktop app
         2. start a power shell and navigate to the repr
         3. call this command
