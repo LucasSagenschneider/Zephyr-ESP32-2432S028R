@@ -26,7 +26,7 @@ Build the Project (in Docker)
 2. call this command
 
    ```
-   west build -p always -b esp32_devkitc_wroom/esp32/procpu -- -DDTC_OVERLAY_FILE=boards/>esp32_devkitc_wroom.overlay
+   west build -p always -b esp32_devkitc_wroom/esp32/procpu -- -DDTC_OVERLAY_FILE=boards/esp32_devkitc_wroom.overlay
    ```
 
 Flashen Build to the board (Power shell in Windows)

@@ -7,7 +7,13 @@
 
     chosen {
         zephyr,display = &ili9341;
+		zephyr,touch = &xpt2046;
     };
+
+	pointer {
+		compatible = "zephyr,lvgl-pointer-input";
+		input = <&xpt2046>;
+	};
 
 	leds {
         compatible = "gpio-leds";
@@ -35,4 +41,37 @@
 		};
 	};
 };
+
+&spi3 {
+	pinctrl-0 = <&spim3_custom_pins>;
+	status = "okay";
+	xpt2046: xpt2046@0 {
+		compatible = "xptek,xpt2046";
+		spi-max-frequency = <2000000>;
+		reg = <0x0>;
+		int-gpios = <&gpio0 36 GPIO_ACTIVE_LOW>;
+		touchscreen-size-x = <240>;
+		touchscreen-size-y = <240>;
+		min-x = <0>;
+		min-y = <0>;
+		max-x = <240>;
+		max-y = <240>;
+	};
+};
+
+
+&pinctrl{
+	spim3_custom_pins: spim3_custom_pins {
+		group1 {
+			pinmux = <SPIM3_MISO_GPIO39>,
+				 <SPIM3_SCLK_GPIO25>,
+				 <SPIM3_CSEL_GPIO33>;
+		};
+		group2 {
+			pinmux = <SPIM3_MOSI_GPIO32>;
+			output-low;
+		};
+	};
+};
+
 

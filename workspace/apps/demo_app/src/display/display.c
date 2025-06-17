@@ -1,32 +1,68 @@
-#include "display.h"
-#include <lvgl.h>
-#include <string.h>
-#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 #include <zephyr/drivers/display.h>
 #include <zephyr/drivers/gpio.h>
+#include <lvgl.h>
+#include <stdio.h>
+#include <string.h>
+#include <zephyr/kernel.h>
+#include <lvgl_input_device.h>
+#include <zephyr/input/input.h>
 
 static const struct gpio_dt_spec backlight = GPIO_DT_SPEC_GET(DT_ALIAS(backlight), gpios);
+static const struct device *const touch_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_touch));
 
 // Settings
-static const uint32_t sleep_time_ms = 50;        // Target 20 FPS
+#include <zephyr/logging/log.h>
+LOG_MODULE_REGISTER(app);
 
 // content
-uint32_t count = 0;
-char buf[11] = {0};
+static uint32_t count;
+char count_str[11] = {0};
+const struct device *display_dev;
+lv_obj_t *hello_world_label;
+lv_obj_t *hello_world_button;
+lv_obj_t *count_label;
 
-lv_obj_t *hello_label;
-lv_obj_t *counter_label;
-lv_obj_t *rect;
-lv_obj_t *circle;
-lv_style_t rect_style;
-lv_style_t circle_style;
-lv_point_t rect_points[5] = { {0, 0}, {120, 0}, {120, 20}, {0, 20}, {0, 0} };
-const uint32_t circle_radius = 15;
+static struct {
+	size_t x;
+	size_t y;
+	bool pressed;
+} touch_point;
+
+static void touch_event_callback(struct input_event *evt, void *user_data)
+{
+	if (evt->code == INPUT_ABS_X) {
+		touch_point.x = evt->value;
+	}
+	if (evt->code == INPUT_ABS_Y) {
+		touch_point.y = evt->value;
+	}
+	if (evt->code == INPUT_BTN_TOUCH) {
+		touch_point.pressed = evt->value;
+	}
+	if (evt->sync) {
+		//k_sem_give(&sync);
+	}
+}
+INPUT_CALLBACK_DEFINE(touch_dev, touch_event_callback, NULL);
+
+
+static void lv_btn_click_callback(lv_event_t *e)
+{
+	ARG_UNUSED(e);
+
+    printk("Button click\r\n");
+
+	count = 0;
+}
+
 
 void init_display()
 {
+    printk("init display\r\n");
     const struct device *display;
-
+    
     // Initialize the display
     display = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
     if (!device_is_ready(display)) {
@@ -46,52 +82,31 @@ void init_display()
 
 void draw_content()
 {
-    // Create a static label widget
-    hello_label = lv_label_create(lv_scr_act());
-    lv_label_set_text(hello_label, "Hello, World!");
-    lv_obj_align(hello_label, LV_ALIGN_TOP_MID, 0, 5);
+	hello_world_button = lv_btn_create(lv_scr_act());
+	lv_obj_align(hello_world_button, LV_ALIGN_CENTER, 0, -15);
+	lv_obj_add_event_cb(hello_world_button, lv_btn_click_callback, LV_EVENT_CLICKED,
+				    NULL);
+	hello_world_label = lv_label_create(hello_world_button);
 
-    // Create a dynamic label widget
-    counter_label = lv_label_create(lv_scr_act());
-    lv_obj_align(counter_label, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_label_set_text(hello_world_label, "Hello world!");
+	lv_obj_align(hello_world_label, LV_ALIGN_CENTER, 0, 0);
 
-    // Set line style
-    lv_style_init(&rect_style);
-    lv_style_set_line_color(&rect_style, lv_color_hex(0x0000FF));
-    lv_style_set_line_width(&rect_style, 3);
+	count_label = lv_label_create(lv_scr_act());
+	lv_obj_align(count_label, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    // Create a rectangle out of lines
-    rect = lv_line_create(lv_scr_act());
-    lv_obj_add_style(rect, &rect_style, 0);
-    lv_line_set_points(rect,
-                       rect_points,
-                       sizeof(rect_points) / sizeof(rect_points[0]));
-    lv_obj_align(rect, LV_ALIGN_TOP_MID, 0, 0);
-
-    // Set circle style
-    lv_style_init(&circle_style);
-    lv_style_set_radius(&circle_style, circle_radius);
-    lv_style_set_bg_opa(&circle_style, LV_OPA_100);
-    lv_style_set_bg_color(&circle_style, lv_color_hex(0xFF0000));
-
-    // Create an object with the new style
-    circle = lv_obj_create(lv_scr_act());
-    lv_obj_set_size(circle, circle_radius * 2, circle_radius * 2);
-    lv_obj_add_style(circle, &circle_style, 0);
-    lv_obj_align(circle, LV_ALIGN_CENTER, 0, 5);
 }
 
 void update_display()
 {
-        // Update counter label every second
-        count++;
-        if ((count % (1000 / sleep_time_ms)) == 0) {
-            sprintf(buf, "%d", count / (1000 / sleep_time_ms));
-            lv_label_set_text(counter_label, buf);
-        }
+	if ((count % 10) == 0U) {
+		sprintf(count_str, "%d", count/10U);
+		lv_label_set_text(count_label, count_str);
+	}
 
-        // Must be called periodically
-        lv_task_handler();
+    printk("TOUCH %s X, Y: (%d, %d)", touch_point.pressed ? "PRESS" : "RELEASE",
+			touch_point.x, touch_point.y);
 
-        k_msleep(sleep_time_ms);
+	lv_task_handler();
+	++count;
+ 	k_sleep(K_MSEC(100));
 }
